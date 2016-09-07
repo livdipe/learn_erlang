@@ -15,6 +15,11 @@ init([]) ->
       permanent, 2000, worker, [ms_accept]
      },
 
+     PlayerSupervisor = {
+     	ms_player_sup, {ms_player_sup, start_link, []},
+     	permanent, infinity, supervisor, [ms_player_sup]
+     },
+
     Restart = {one_for_one, 5, 10},
-    {ok, {Restart, [AcceptServer]}}.
+    {ok, {Restart, [AcceptServer, PlayerSupervisor]}}.
     

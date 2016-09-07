@@ -11,12 +11,14 @@
 	 terminate/2,
 	 code_change/3]).
 
--record(state, {sock, player=dict:new()}).
+-record(state, {sock}).
 
 start_link(Socket) ->
     gen_server:start_link(?MODULE, [Socket], []).
 
 init([Socket]) ->
+    % io:format("ms_player init ~p~n", [Socket]),
+    % gen_tcp:send(Socket, <<"abc">>),
     {ok, #state{sock=Socket}}.
 
 handle_call(_Request, _From, State) ->
@@ -26,9 +28,10 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({tcp, Sock, Data}, State) when Sock =:= State#state.sock ->
-    io:format("receive Data : [~p~n]", Data),
+handle_info({tcp, Sock, Data}, State) ->
+    io:format("receive Data ~p~n", [Data]),
     inet:setopts(Sock, [{active, once}]),
+    gen_tcp:send(Sock, Data),
     {noreply, State};
 handle_info({tcp_closed, _}, State) ->
     {stop, "Some Player Lost Connection closed", State};

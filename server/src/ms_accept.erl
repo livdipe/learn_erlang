@@ -17,7 +17,7 @@ start_link() ->
 
 init([Port]) ->
     {ok, Sock} = gen_tcp:listen(Port, [binary, {reuseaddr, true}, {active, once},
-				       {nodelay, true}, {ip, {0, 0, 0, 0}}, inet, {packet, 4}]),
+				       {nodelay, true}, {ip, {0, 0, 0, 0}}, inet, {packet, 2}]),
     gen_server:cast(self(), accept),
     {ok, Sock}.
 				       
@@ -27,9 +27,10 @@ handle_call(_Request, _From, State) ->
 
 handle_cast(accept, Sock) ->
     {ok, Client} = gen_tcp:accept(Sock),
-    io:format("A Client Connected"),
+    io:format("A Client Connected: ~p~n", [Client]),
     {ok, Pid} = ms_player_sup:create_player(Client),
-    gen_tcp:controlling_progress(Client, Pid),
+    io:format("Pid:~p~n", [Pid]),
+    gen_tcp:controlling_process(Client, Pid),
     gen_server:cast(self(), accept),
     {noreply, Sock}.
 
