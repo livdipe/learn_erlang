@@ -20,6 +20,11 @@ init([]) ->
      	permanent, infinity, supervisor, [ms_player_sup]
      },
 
+     RoomSupervisor = {
+        ms_room_sup, {ms_room_sup, start_link, []},
+        permanent, infinity, supervisor, [ms_room_sup]
+     },
+
     Restart = {one_for_one, 5, 10},
-    {ok, {Restart, [AcceptServer, PlayerSupervisor]}}.
+    {ok, {Restart, [AcceptServer, PlayerSupervisor, RoomSupervisor]}}.
     

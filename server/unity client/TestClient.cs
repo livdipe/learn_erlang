@@ -13,10 +13,27 @@ public class TestClient : MonoBehaviour
 
     void Update()
     {
-        Vector3 pos = Vector3.Lerp(transform.position, RandomPosition(), Time.deltaTime * 10);
-        string msg = string.Format("{0:F2}, {1:F2}, {2:F2}", pos.x, pos.y, pos.z);
-        sc1.SendMessage(System.Text.Encoding.UTF8.GetBytes(msg));
+        UpdateTransform();
+        ProcessMessage();
+    }
 
+    float angle = 0;
+    float speed = (2 * Mathf.PI) / 5;
+    float x, y;
+    public float radius = 200;
+    public Vector3 center = new Vector3(0, 0, 0);
+    void UpdateTransform()
+    {
+        angle += speed * Time.deltaTime;
+        x = Mathf.Cos(angle) * radius + center.x;
+        y = Mathf.Sin(angle) * radius + center.y;
+//        Vector3 pos = Vector3.Lerp(transform.position, RandomPosition(), Time.deltaTime * 10);
+        string msg = string.Format("{0:F2}, {1:F2}, {2:F2}", x, y, 0);
+        sc1.SendMessage(System.Text.Encoding.UTF8.GetBytes(msg));
+    }
+
+    void ProcessMessage()
+    {
         if (sc1.messages.Count > 0)
         {
             lock (sc1.messages)
