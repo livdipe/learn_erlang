@@ -20,19 +20,33 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast({broadcast, Data}, State) ->
-    gen_tcp:send(State#state.sock, Data),
-    {noreply, State};
-handle_cast({join, RoomId, RoomPid}, State) ->
-    {noreply, State#state{roomid = RoomId, roompid = RoomPid}};    
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+%handle_cast({broadcast, Data}, State) ->
+%    io:format("player broadcast~n"),
+%    gen_tcp:send(State#state.sock, Data),
+%    {noreply, State};
+%handle_cast({join, RoomId, RoomPid}, State) ->
+%    {noreply, State#state{roomid = RoomId, roompid = RoomPid}};    
+handle_cast(Msg, State) ->
+    NewState =
+    case Msg of
+        {join, RoomId, RoomPid} ->
+            io:format("player join: ~p~p~n", [RoomId, RoomPid]),
+            State#state{roomid = RoomId, roompid = RoomPid};    
+        {broadcast, Data} ->
+            io:format("player broadcast~n"),
+            gen_tcp:send(State#state.sock, Data),
+            State;
+        _Other ->
+            State
+    end,
+    {noreply, NewState}.
 
-handle_info({tcp, Sock, Data}, State) ->
+handle_info({tcp, Sock, Data}, #state{roompid = RoomPid} = State) ->
     io:format("receive Data ~p~n", [Data]),
     inet:setopts(Sock, [{active, once}]),
     % gen_tcp:send(Sock, Data),
-    gen_server:cast(State#state.roompid, {broadcast, Data}),
+    io:format("-> room pidData ~p~n", [RoomPid]),
+    gen_server:cast(RoomPid, {broadcast, Data}),
     {noreply, State};
 handle_info({tcp_closed, _}, State) ->
     {stop, "Some Player Lost Connection closed", State};

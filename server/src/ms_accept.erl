@@ -34,13 +34,18 @@ handle_cast(accept, #state{sock = Sock, rooms = Rooms} = State) ->
     gen_tcp:controlling_process(Client, PlayerPid),
     NewState = 
     % case State#state.rooms of
-    case Rooms /= [] of
-        true ->
-            [RoomPid | _ElseRooms] = Rooms,
+    case Rooms of
+       undefined ->
+            {ok, RoomPid} = ms_room_sup:create_room(PlayerPid, 1),
+            gen_server:cast(PlayerPid, {join, 1, RoomPid}),
+            gen_server:cast(RoomPid, {join, PlayerPid}),
+            State#state{rooms = [RoomPid]};
+       [RoomPid | _ElseRooms] ->
             gen_server:cast(RoomPid, {join, PlayerPid}),
             gen_server:cast(PlayerPid, {join, 1, RoomPid}),
+            io:format("~p~n", [Rooms]),
             State;
-        false ->
+       [] ->
             %% 1 roomid
             {ok, RoomPid} = ms_room_sup:create_room(PlayerPid, 1),
             gen_server:cast(PlayerPid, {join, 1, RoomPid}),
