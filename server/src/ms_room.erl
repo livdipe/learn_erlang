@@ -68,7 +68,7 @@ broadcast(Data, Players) ->
 	lists:foreach(
 		fun(PlayerPid) ->
             io:format("broadcast to player : ~p~n", [PlayerPid]),
-            gen_server:cast(PlayerPid, Data)
+            gen_server:cast(PlayerPid, {broadcast, Data})
 		end,
 		Players
 		),
