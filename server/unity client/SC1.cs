@@ -33,7 +33,6 @@ public class SC1
         client.NoDelay = true;
         try
         {
-			Debug.LogError("C#Connecting ..." + Time.time + " host : " + host);
             client.BeginConnect(host, port, new AsyncCallback(OnConnect), null);
         }
         catch(Exception e)
@@ -49,6 +48,8 @@ public class SC1
         client.EndConnect(asr);
         outStream = client.GetStream();
         client.GetStream().BeginRead(byteBuffer, 0, MAX_READ, new AsyncCallback(OnRead), null);
+//		SendMessage(System.Text.Encoding.UTF8.GetBytes("hello"));
+		Debug.LogError("OnConnected");
     }
 
     //读取消息
@@ -116,9 +117,11 @@ public class SC1
     public void SendMessage(byte[] bodyBytes)
     {
         short len = (short)(bodyBytes.Length);
-        byte[] lenBytes = ConverterTool.ToNetworkOrder(len);
-        byte[] sendData = ConverterTool.CombineBytes(new List<byte[]> { lenBytes, bodyBytes});
-        WriteMessage(sendData);
+        byte[] lenBytes = BitConverter.GetBytes((IPAddress.HostToNetworkOrder(len)));
+		byte[] array = new byte[lenBytes.Length + bodyBytes.Length];
+		Array.Copy(lenBytes, 0, array, 0, lenBytes.Length);
+		Array.Copy(bodyBytes, 0, array, lenBytes.Length, bodyBytes.Length);
+		WriteMessage(array);
     }
 
     //写数据

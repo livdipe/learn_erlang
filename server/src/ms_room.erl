@@ -11,18 +11,37 @@
 		terminate/2,
 		code_change/3]).
 
+-record(player, {id, pid, sock, position}).
 -record(state, {roomid, owner, players=[]}).
 
 start_link(OwnerPid, RoomId) ->
 	gen_server:start_link(?MODULE, [OwnerPid, RoomId], []).
 
-init([OwnerPid, RoomId]) ->
-    io:format("room pid : ~p~n", [self()]),
-	{ok, #state{roomid = RoomId, owner = OwnerPid}}.
+init([OwnerPid, RoomId]) -> 
+    %% io:format("room pid : ~p~n", [self()]), 
+    {ok, #state{roomid = RoomId, owner = OwnerPid}}.
 
+handle_call(Msg, _From, #state{players = Players} = State) ->
+    NewState = 
+    case Msg of
+        {join, PlayerPid, PlayerSocket} ->
+            %% io:format("~p join~n", [PlayerPid]),
+            NewId = get_new_id(Players),
+            notify(PlayerSocket, list_to_binary(io_lib:format("createplayer,~p",[NewId]))),
+            notify_other_info(PlayerSocket, Players),
+            NewPlayer = #player{id = NewId, pid = PlayerPid, sock = PlayerSocket},
+            NewPlayers = [NewPlayer | Players],
+            %% 广播其他玩家，有新玩家加入 
+            Str = io_lib:format("newplayer,~p", [NewId]),
+            Data = list_to_binary(Str),
+            broadcast(Data, Players),
+            State#state{players=NewPlayers};
+        _ ->
+            State
+    end,
+    {reply, ok, NewState};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
-
 
 %% 房间中广播消息
 %handle_cast({broadcast, Data}, State) ->
@@ -35,20 +54,29 @@ handle_call(_Request, _From, State) ->
     %io:format("~p join~n", [PlayerPid]),
     %NewPlayers = [PlayerPid | State#state.players],
     %{noreply, ok, State#state{players=NewPlayers}};
-handle_cast(Msg, State) ->
-    io:format("Msg:~p~n", [Msg]),
+handle_cast(Msg, #state{players = Players} = State) ->
+    %% io:format("Msg:~p~n", [Msg]),
     NewState = 
     case Msg of
-        {join, PlayerPid} ->
-            io:format("~p join~n", [PlayerPid]),
-            NewPlayers = [PlayerPid | State#state.players],
-            State#state{players=NewPlayers};
+        %% {join, PlayerPid, PlayerSocket} ->
+        %%     io:format("~p join~n", [PlayerPid]),
+        %%     NewId = get_new_id(Players),
+        %%     notify(PlayerSocket, list_to_binary(io_lib:format("createplayer,~p",[NewId]))),
+        %%     notify_other_info(PlayerSocket, Players),
+        %%     NewPlayer = #player{id = NewId, pid = PlayerPid, sock = PlayerSocket},
+        %%     NewPlayers = [NewPlayer | Players],
+        %%     %% 广播其他玩家，有新玩家加入 
+        %%     Str = io_lib:format("newplayer,~p", [NewId]),
+        %%     Data = list_to_binary(Str),
+        %%     broadcast(Data, Players),
+        %%     State#state{players=NewPlayers};
+        {remove, PlayerPid} ->
+            io:format("remove ~p from room, left ~p~n", [PlayerPid, length(Players) - 1]),
+            State#state{players = lists:keydelete(PlayerPid, #player.pid, Players)};
         {broadcast, Data} ->
-            io:format("okdkdk~n"),
-            broadcast(Data, State#state.players),
+            broadcast(Data, Players),
             State;
         _ ->
-            io:format("erjek~n"),
             State
     end,
     {noreply, NewState}.
@@ -66,15 +94,37 @@ code_change(_OldVsn, State, _Extra) ->
 
 broadcast(Data, Players) ->
 	lists:foreach(
-		fun(PlayerPid) ->
-            io:format("broadcast to player : ~p~n", [PlayerPid]),
-            gen_server:cast(PlayerPid, {broadcast, Data})
+    fun(Player) ->
+            notify(Player#player.sock, Data)
 		end,
 		Players
 		),
 	ok.
 
+notify(PlayerSocket, Data) ->
+    %% io:format("broadcast to player : ~p~n", [PlayerSocket]),
+    gen_tcp:send(PlayerSocket, Data).
+
+notify_other_info(PlayerSocket, OtherPlayers) ->
+    lists:foreach(
+      fun(Player) ->
+              notify(PlayerSocket, list_to_binary(io_lib:format("newplayer,~p",[Player#player.id])))
+      end,
+      OtherPlayers
+     ),
+    ok.
 
 
+get_new_id(Players) ->
+    get_new_id(1, Players).
 
-
+get_new_id(Id, []) ->
+    Id;
+get_new_id(Id, [Player|Players]) ->
+    NewId = if
+                Id > Player#player.id ->
+                    Id;
+                true ->
+                    Player#player.id + 1
+            end,
+    get_new_id(NewId, Players).

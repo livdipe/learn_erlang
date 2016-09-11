@@ -1,14 +1,13 @@
-{application, muserver,
+{application, tcp_server,
  [
   {description, ""},
   {vsn, "0.1"},
-  {modules, []},
   {registered, []},
   {application, [
   		 kernel,
 		 stdlib
 		]},
-  {mod, { ms_app, []}},
+  {mod, { tcp_server_app, []}},
   {env, []}
   ]}.
   
