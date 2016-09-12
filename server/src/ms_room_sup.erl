@@ -13,7 +13,6 @@ start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 create_room(OwnerPid, RoomId) ->
-	io:format("create room~n"),
 	supervisor:start_child(?MODULE, [OwnerPid, RoomId]).
 
 init([]) ->

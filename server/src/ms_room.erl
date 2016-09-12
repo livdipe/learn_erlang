@@ -18,14 +18,12 @@ start_link(OwnerPid, RoomId) ->
 	gen_server:start_link(?MODULE, [OwnerPid, RoomId], []).
 
 init([OwnerPid, RoomId]) -> 
-    %% io:format("room pid : ~p~n", [self()]), 
     {ok, #state{roomid = RoomId, owner = OwnerPid}}.
 
 handle_call(Msg, _From, #state{players = Players} = State) ->
     NewState = 
     case Msg of
         {join, PlayerPid, PlayerSocket} ->
-            %% io:format("~p join~n", [PlayerPid]),
             NewId = get_new_id(Players),
             notify(PlayerSocket, list_to_binary(io_lib:format("createplayer,~p",[NewId]))),
             notify_other_info(PlayerSocket, Players),
@@ -43,33 +41,9 @@ handle_call(Msg, _From, #state{players = Players} = State) ->
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
-%% 房间中广播消息
-%handle_cast({broadcast, Data}, State) ->
-%    io:format("broadcast~n"),
-%    broadcast(Data, State#state.players),
-%    {noreply, State};
-
-%% 房间中加入玩家
-%handle_cast({join, PlayerPid}, State) ->
-    %io:format("~p join~n", [PlayerPid]),
-    %NewPlayers = [PlayerPid | State#state.players],
-    %{noreply, ok, State#state{players=NewPlayers}};
 handle_cast(Msg, #state{players = Players} = State) ->
-    %% io:format("Msg:~p~n", [Msg]),
     NewState = 
     case Msg of
-        %% {join, PlayerPid, PlayerSocket} ->
-        %%     io:format("~p join~n", [PlayerPid]),
-        %%     NewId = get_new_id(Players),
-        %%     notify(PlayerSocket, list_to_binary(io_lib:format("createplayer,~p",[NewId]))),
-        %%     notify_other_info(PlayerSocket, Players),
-        %%     NewPlayer = #player{id = NewId, pid = PlayerPid, sock = PlayerSocket},
-        %%     NewPlayers = [NewPlayer | Players],
-        %%     %% 广播其他玩家，有新玩家加入 
-        %%     Str = io_lib:format("newplayer,~p", [NewId]),
-        %%     Data = list_to_binary(Str),
-        %%     broadcast(Data, Players),
-        %%     State#state{players=NewPlayers};
         {remove, PlayerPid} ->
             io:format("remove ~p from room, left ~p~n", [PlayerPid, length(Players) - 1]),
             State#state{players = lists:keydelete(PlayerPid, #player.pid, Players)};
@@ -81,7 +55,6 @@ handle_cast(Msg, #state{players = Players} = State) ->
     end,
     {noreply, NewState}.
 
-
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -90,7 +63,6 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
-
 
 broadcast(Data, Players) ->
 	lists:foreach(
@@ -102,18 +74,16 @@ broadcast(Data, Players) ->
 	ok.
 
 notify(PlayerSocket, Data) ->
-    %% io:format("broadcast to player : ~p~n", [PlayerSocket]),
     gen_tcp:send(PlayerSocket, Data).
 
 notify_other_info(PlayerSocket, OtherPlayers) ->
     lists:foreach(
       fun(Player) ->
-              notify(PlayerSocket, list_to_binary(io_lib:format("newplayer,~p",[Player#player.id])))
+        notify(PlayerSocket, list_to_binary(io_lib:format("newplayer,~p",[Player#player.id])))
       end,
       OtherPlayers
      ),
     ok.
-
 
 get_new_id(Players) ->
     get_new_id(1, Players).
